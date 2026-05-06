@@ -232,10 +232,10 @@
   </div>
 
   <div class="mode-bar">
-    <button class="mode-btn append active" id="modeAppend" onclick="setMode('append')">📝 시트 누적</button>
-    <button class="mode-btn lookup" id="modeLookup" onclick="setMode('lookup')">🔍 조회만</button>
+   <button class="mode-btn append" id="modeAppend" onclick="setMode('append')">📝 시트 누적</button>
+<button class="mode-btn lookup active" id="modeLookup" onclick="setMode('lookup')">🔍 조회만</button>
   </div>
-  <div class="mode-banner append" id="modeBanner">📝 스캔 시 시트에 자동 기록됩니다</div>
+  <div class="mode-banner lookup" id="modeBanner">🔍 조회만 — 시트엔 기록되지 않습니다</div>
 
   <div id="reader"></div>
 
@@ -267,7 +267,7 @@
   var GAS_URL = 'https://script.google.com/a/macros/kurlycorp.com/s/AKfycbxdoAEyhJZIHkS10YbagCd16wgxGc2kgDyUFQ-juVd6HGrkawvyCg1JTLKRPG7oaO_7xQ/exec';
 
   var WORKER_KEY = 'worker_name_v1';
-  var currentMode = 'append';
+  var currentMode = 'lookup';
   var html5QrCode = null;
   var camRunning = false;
   var currentFacing = 'environment';
@@ -381,7 +381,7 @@
     if (code === lastScan && (now - lastScanTime) < COOLDOWN_MS) return;
     lastScan = code; lastScanTime = now;
     if (navigator.vibrate) navigator.vibrate(60);
-    stopCam();              // ← 이 줄 추가
+    stopCam();              // ← 이 한 줄 추가
     processScan(code);
   }
 
