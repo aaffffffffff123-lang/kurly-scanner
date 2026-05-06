@@ -337,7 +337,7 @@
     html5QrCode.start(
       { facingMode: currentFacing },
       config,
-      function(decodedText) { onScan(decodedText); },
+      function(decodedText) { (decodedText); },
       function() {}
     ).then(function() {
       camRunning = true;
@@ -381,6 +381,7 @@
     if (code === lastScan && (now - lastScanTime) < COOLDOWN_MS) return;
     lastScan = code; lastScanTime = now;
     if (navigator.vibrate) navigator.vibrate(60);
+    stopCam();              // ← 이 줄 추가
     processScan(code);
   }
 
