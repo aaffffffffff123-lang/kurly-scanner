@@ -222,6 +222,25 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.danger { background: var(--danger); }
   .toast.success { background: var(--success); }
+
+
+.loading-spinner {
+    width: 28px; height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-card {
+    background: white; border-radius: 14px; padding: 16px;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  
 </style>
 </head>
 <body>
@@ -408,12 +427,24 @@ function stopCam() {
   }
 
   // ========== 스캔 처리 ==========
-  function processScan(code) {
+ function processScan(code) {
+    document.getElementById('resultArea').innerHTML =
+      '<div class="loading-card">' +
+      '<div class="loading-spinner"></div>' +
+      '<div>' +
+      '<div style="font-weight:800;font-size:14px;">조회 중...</div>' +
+      '<div style="font-family:monospace;font-size:12px;color:var(--text-muted);margin-top:4px;">' +
+      escapeHtml(code) + '</div>' +
+      '</div>' +
+      '</div>';
+
     apiCall('processScan', { scanCode: code, mode: currentMode })
       .then(function(res) { renderResult(code, res); })
-      .catch(function(err) { showToast('서버 오류: ' + err.message, 'danger'); });
+      .catch(function(err) {
+        document.getElementById('resultArea').innerHTML = '';
+        showToast('서버 오류: ' + err.message, 'danger');
+      });
   }
-
   function renderResult(code, res) {
     if (res && res.error) { showToast(res.error, 'danger'); return; }
 
