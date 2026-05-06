@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>카메라 재고 스캐너</title>
+<style>
+  :root {
+    --bg: #f8fafc; --surface: #ffffff;
+    --text: #0f172a; --text-muted: #475569; --text-faint: #94a3b8;
+    --border: #e2e8f0;
+    --primary: #4f46e5; --primary-dark: #4338ca; --primary-light: #eef2ff;
+    --success: #059669; --danger: #dc2626; --warn: #d97706;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: var(--bg); color: var(--text);
+    margin: 0; padding: 0;
+    -webkit-font-smoothing: antialiased; overscroll-behavior: none;
+  }
+  .wrap { max-width: 600px; margin: 0 auto; padding: 12px; }
+  .worker-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+  .worker-label {
+    background: white; border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; color: var(--text-muted); cursor: pointer;
+  }
+  .worker-label:hover { border-color: var(--primary); color: var(--primary-dark); }
+
+  .mode-bar {
+    display: flex; gap: 0; background: white;
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 4px; margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .mode-btn {
+    flex: 1; padding: 12px 8px; background: transparent;
+    border: none; border-radius: 9px; cursor: pointer;
+    font-size: 14px; font-weight: 700; color: var(--text-muted);
+    transition: all 0.18s;
+  }
+  .mode-btn.active.append { background: var(--danger); color: white; }
+  .mode-btn.active.lookup { background: var(--primary); color: white; }
+  .mode-banner {
+    text-align: center; padding: 8px; border-radius: 8px;
+    margin-bottom: 10px; font-size: 13px; font-weight: 700;
+  }
+  .mode-banner.append { background: #fee2e2; color: #991b1b; }
+  .mode-banner.lookup { background: var(--primary-light); color: var(--primary-dark); }
+
+  #reader {
+    width: 100%; border-radius: 14px; overflow: hidden;
+    background: #000; min-height: 280px;
+    border: 2px solid var(--border);
+  }
+  #reader video { border-radius: 12px; }
+  .cam-controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+  .cam-btn {
+    flex: 1; min-width: 110px; padding: 12px;
+    background: white; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 14px; font-weight: 700;
+    color: var(--text); cursor: pointer;
+  }
+  .cam-btn.primary { background: var(--primary); color: white; border-color: var(--primary); }
+  .cam-btn.danger { background: var(--danger); color: white; border-color: var(--danger); }
+  .cam-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .manual { display: flex; gap: 6px; margin: 10px 0; }
+  .manual input {
+    flex: 1; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 15px; outline: none;
+  }
+  .manual input:focus { border-color: var(--primary); }
+  .manual button {
+    padding: 0 18px; background: var(--primary); color: white;
+    border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
+  }
+
+  .result-card {
+    background: white; border-radius: 14px; padding: 14px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 12px;
+    animation: slide 0.25s ease-out;
+  }
+  @keyframes slide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .result-card.notfound { border: 2px solid var(--danger); }
+  .result-card.outofstock { border-left: 6px solid var(--warn); }
+
+  .result-top { display: flex; gap: 12px; margin-bottom: 10px; }
+  .result-img {
+    width: 90px; height: 90px; flex-shrink: 0;
+    border-radius: 8px; overflow: hidden;
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+  }
+  .result-img img { width: 100%; height: 100%; object-fit: contain; }
+  .result-img .no-img { font-size: 32px; opacity: 0.4; }
+  .result-info { flex: 1; min-width: 0; }
+  .result-name {
+    font-size: 16px; font-weight: 800; line-height: 1.35;
+    margin: 0 0 6px 0; word-break: break-all;
+  }
+  .result-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--primary-dark); font-weight: 700;
+  }
+  .result-loc {
+    margin-top: 8px; padding: 10px 12px;
+    background: var(--primary-light); border-radius: 8px;
+    font-weight: 700; font-size: 14px; color: #1e1b4b;
+  }
+  .result-loc.warn { background: #fef3c7; color: #78350f; }
+  .result-meta {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    margin-top: 8px; font-size: 12px; color: var(--text-muted);
+  }
+  .result-meta span { background: #f1f5f9; padding: 3px 8px; border-radius: 5px; }
+
+  .badge-saved {
+    display: inline-block; background: var(--success); color: white;
+    padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .badge-notfound {
+    display: inline-block; background: var(--danger); color: white;
+    padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  /* Slack 공유 */
+  .share-area { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+  .share-btn {
+    width: 100%; padding: 12px; background: #4a154b; color: white;
+    border: none; border-radius: 10px; font-size: 14px; font-weight: 800;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .share-btn.expanded { background: #6b7280; }
+  .share-panel {
+    margin-top: 10px; padding: 12px;
+    background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px;
+  }
+  .share-label { font-size: 12px; font-weight: 800; color: #6b21a8; margin-bottom: 8px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .share-reasons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .reason-chip {
+    padding: 10px 8px; background: white;
+    border: 1.5px solid #e9d5ff; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; color: #6b21a8;
+  }
+  .reason-chip.active { background: #6b21a8; color: white; border-color: #6b21a8; }
+  .memo-input {
+    width: 100%; padding: 10px 12px; margin-bottom: 10px;
+    border: 1.5px solid #e9d5ff; border-radius: 8px;
+    font-size: 14px; outline: none; background: white; font-family: inherit;
+  }
+  .memo-input.required { border-color: var(--danger); }
+  .share-actions { display: flex; gap: 6px; }
+  .cancel-btn, .send-btn {
+    flex: 1; padding: 11px; border-radius: 8px;
+    font-size: 14px; font-weight: 800; cursor: pointer; border: none;
+  }
+  .cancel-btn { background: white; color: var(--text-muted); border: 1px solid var(--border); }
+  .send-btn { background: #4a154b; color: white; }
+  .send-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+  /* 사진 */
+  .snap-area { margin-bottom: 10px; }
+  .snap-btn {
+    width: 100%; padding: 11px;
+    background: white; border: 1.5px dashed #c4b5fd; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; color: #6b21a8;
+  }
+  .snap-btn.has-photo { border-style: solid; background: #ede9fe; }
+  .snap-preview {
+    margin-top: 8px; position: relative;
+    border-radius: 8px; overflow: hidden;
+    border: 1px solid #e9d5ff; background: #000;
+  }
+  .snap-preview img { width: 100%; display: block; max-height: 220px; object-fit: contain; }
+  .snap-remove {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(0,0,0,0.75); color: white; border: none;
+    width: 30px; height: 30px; border-radius: 50%;
+    font-size: 16px; cursor: pointer;
+  }
+  .snap-info {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.6); color: white;
+    padding: 5px 10px; font-size: 11px; font-weight: 600;
+  }
+
+  .recent-list {
+    background: white; border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px; margin-top: 12px;
+  }
+  .recent-list h4 {
+    margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);
+    font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .recent-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;
+  }
+  .recent-row:last-child { border-bottom: none; }
+  .recent-row .ts { color: var(--text-faint); font-size: 11px; min-width: 38px; }
+  .recent-row .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent-row .ok { color: var(--success); font-weight: 800; }
+  .recent-row .ng { color: var(--danger); font-weight: 800; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1e293b; color: white;
+    padding: 12px 20px; border-radius: 10px;
+    font-size: 14px; font-weight: 700; z-index: 9999;
+    opacity: 0; transition: all 0.2s; pointer-events: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    max-width: 90%; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.danger { background: var(--danger); }
+  .toast.success { background: var(--success); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="worker-bar">
+    <span class="worker-label" id="workerLabel" onclick="setWorker()">👤 이름 설정</span>
+  </div>
+
+  <div class="mode-bar">
+    <button class="mode-btn append active" id="modeAppend" onclick="setMode('append')">📝 시트 누적</button>
+    <button class="mode-btn lookup" id="modeLookup" onclick="setMode('lookup')">🔍 조회만</button>
+  </div>
+  <div class="mode-banner append" id="modeBanner">📝 스캔 시 시트에 자동 기록됩니다</div>
+
+  <div id="reader"></div>
+
+  <div class="cam-controls">
+    <button class="cam-btn primary" id="startBtn" onclick="startCam()">📷 카메라 시작</button>
+    <button class="cam-btn danger" id="stopBtn" onclick="stopCam()" disabled>⏸ 정지</button>
+    <button class="cam-btn" onclick="flipCam()">🔄 카메라 전환</button>
+  </div>
+
+  <div class="manual">
+    <input type="text" id="manualInput" placeholder="수동 입력 (Enter)" autocomplete="off"
+           onkeypress="if(event.key==='Enter')submitManual()">
+    <button onclick="submitManual()">처리</button>
+  </div>
+
+  <div id="resultArea"></div>
+
+  <div class="recent-list" id="recentArea" style="display:none;">
+    <h4>📋 이번 세션 스캔 (<span id="recentCount">0</span>건)</h4>
+    <div id="recentRows"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+  // ⚠️ GAS 배포 URL — 너의 URL로 박혀있음
+  var GAS_URL = 'https://script.google.com/a/macros/kurlycorp.com/s/AKfycbxdoAEyhJZIHkS10YbagCd16wgxGc2kgDyUFQ-juVd6HGrkawvyCg1JTLKRPG7oaO_7xQ/exec';
+
+  var WORKER_KEY = 'worker_name_v1';
+  var currentMode = 'append';
+  var html5QrCode = null;
+  var camRunning = false;
+  var currentFacing = 'environment';
+  var lastScan = '';
+  var lastScanTime = 0;
+  var COOLDOWN_MS = 1800;
+  var recent = [];
+  var lastResult = null;
+  var pickedReason = '';
+  var snapBase64 = '';
+
+  // ========== 공통 API 호출 (GAS doPost) ==========
+  function apiCall(action, payload) {
+    var body = Object.assign({ action: action }, payload || {});
+    return fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(body)
+      // Content-Type 명시 안 함 → text/plain → CORS preflight 회피
+    })
+    .then(function(res) { return res.text(); })
+    .then(function(text) {
+      try { return JSON.parse(text); }
+      catch (e) { return { error: '응답 파싱 실패: ' + text.substring(0, 200) }; }
+    });
+  }
+
+  // ========== 모드 토글 ==========
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('modeAppend').classList.toggle('active', mode === 'append');
+    document.getElementById('modeLookup').classList.toggle('active', mode === 'lookup');
+    var banner = document.getElementById('modeBanner');
+    if (mode === 'append') {
+      banner.className = 'mode-banner append';
+      banner.textContent = '📝 스캔 시 시트에 자동 기록됩니다';
+    } else {
+      banner.className = 'mode-banner lookup';
+      banner.textContent = '🔍 조회만 — 시트엔 기록되지 않습니다';
+    }
+    showToast(mode === 'append' ? '시트 누적 모드' : '조회 전용 모드', mode === 'append' ? 'danger' : '');
+  }
+
+  // ========== 카메라 ==========
+  function startCam() {
+    if (camRunning) return;
+    if (!html5QrCode) html5QrCode = new Html5Qrcode('reader');
+
+    var config = {
+      fps: 10,
+      qrbox: function(w, h) {
+        var minEdge = Math.min(w, h);
+        return { width: Math.floor(minEdge * 0.85), height: Math.floor(minEdge * 0.45) };
+      },
+      aspectRatio: 1.333,
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.ITF
+      ]
+    };
+
+    html5QrCode.start(
+      { facingMode: currentFacing },
+      config,
+      function(decodedText) { onScan(decodedText); },
+      function() {}
+    ).then(function() {
+      camRunning = true;
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = false;
+    }).catch(function(err) {
+      var name = err && err.name ? err.name : '';
+      var msg = '카메라 오류: ' + err;
+      if (name === 'NotAllowedError') msg = '🚫 카메라 권한 차단됨. 브라우저/OS 설정 확인.';
+      else if (name === 'NotFoundError') msg = '📷 카메라 없음.';
+      else if (name === 'NotReadableError') msg = '⚠️ 다른 앱에서 카메라 사용 중.';
+      showToast(msg, 'danger');
+    });
+  }
+
+  function stopCam() {
+    if (!html5QrCode || !camRunning) return;
+    html5QrCode.stop().then(function() {
+      camRunning = false;
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+    }).catch(function() {});
+  }
+
+  function flipCam() {
+    var wasRunning = camRunning;
+    if (wasRunning) {
+      stopCam();
+      setTimeout(function() {
+        currentFacing = (currentFacing === 'environment') ? 'user' : 'environment';
+        startCam();
+      }, 400);
+    } else {
+      currentFacing = (currentFacing === 'environment') ? 'user' : 'environment';
+      showToast('전환됨: ' + (currentFacing === 'environment' ? '후면' : '전면'));
+    }
+  }
+
+  function onScan(code) {
+    var now = Date.now();
+    if (code === lastScan && (now - lastScanTime) < COOLDOWN_MS) return;
+    lastScan = code; lastScanTime = now;
+    if (navigator.vibrate) navigator.vibrate(60);
+    processScan(code);
+  }
+
+  function submitManual() {
+    var v = document.getElementById('manualInput').value.trim();
+    if (!v) return;
+    document.getElementById('manualInput').value = '';
+    processScan(v);
+  }
+
+  // ========== 스캔 처리 ==========
+  function processScan(code) {
+    apiCall('processScan', { scanCode: code, mode: currentMode })
+      .then(function(res) { renderResult(code, res); })
+      .catch(function(err) { showToast('서버 오류: ' + err.message, 'danger'); });
+  }
+
+  function renderResult(code, res) {
+    if (res && res.error) { showToast(res.error, 'danger'); return; }
+
+    var html = '';
+    var isAppendMode = (currentMode === 'append');
+
+    if (!res.found) {
+      html = '<div class="result-card notfound">' +
+             '<span class="badge-notfound">❌ 데이터 없음</span>' +
+             '<div class="result-name">' + escapeHtml(code) + '</div>' +
+             '<div style="margin-top:8px;color:var(--text-muted);font-size:13px;">' +
+             (isAppendMode ? '시트엔 "데이터 없음"으로 기록됨' : '재고raw에서 매칭 안 됨') +
+             '</div></div>';
+      showToast('❌ 데이터 없음', 'danger');
+      pushRecent(code, '데이터 없음', false);
+    } else {
+      var imgHtml = res.img
+        ? '<img src="' + escapeAttr(res.img) + '" onerror="this.parentElement.innerHTML=\'<span class=no-img>🖼️</span>\'">'
+        : '<span class="no-img">🖼️</span>';
+      var locClass = res.isOutOfStock ? 'warn' : '';
+      var locIcon = res.isOutOfStock ? '⚠️' : '📍';
+
+      var shareHtml = '';
+      if (currentMode === 'lookup') {
+        shareHtml =
+          '<div class="share-area">' +
+          '<button class="share-btn" id="share-toggle-btn" onclick="toggleSharePanel()">📤 슬랙에 공유</button>' +
+          '<div class="share-panel" id="share-panel" style="display:none;">' +
+          '<div class="share-label">사유 선택</div>' +
+          '<div class="share-reasons">' +
+            '<button class="reason-chip" data-reason="파손" onclick="pickReason(this)">💔 파손</button>' +
+            '<button class="reason-chip" data-reason="재진열" onclick="pickReason(this)">🔄 재진열</button>' +
+            '<button class="reason-chip" data-reason="위치불일치" onclick="pickReason(this)">📍 위치불일치</button>' +
+            '<button class="reason-chip" data-reason="기타" onclick="pickReason(this)">📝 기타</button>' +
+          '</div>' +
+          '<div class="snap-area">' +
+            '<input type="file" accept="image/*" capture="environment" id="snap-input" hidden onchange="onSnapPicked(event)">' +
+            '<button class="snap-btn" id="snap-btn" type="button" onclick="document.getElementById(\'snap-input\').click()">📸 현장 사진 촬영 (선택)</button>' +
+            '<div class="snap-preview" id="snap-preview" style="display:none;">' +
+              '<img id="snap-img" alt="현장 촬영">' +
+              '<button class="snap-remove" onclick="removeSnap()">✕</button>' +
+              '<div class="snap-info" id="snap-info"></div>' +
+            '</div>' +
+          '</div>' +
+          '<input type="text" class="memo-input" id="memo-input" placeholder="메모 (선택, 기타는 필수)" oninput="checkSendReady()">' +
+          '<div class="share-actions">' +
+            '<button class="cancel-btn" onclick="toggleSharePanel()">취소</button>' +
+            '<button class="send-btn" id="send-btn" onclick="sendShare()" disabled>보내기</button>' +
+          '</div>' +
+          '</div>' +
+          '</div>';
+      }
+
+      html = '<div class="result-card ' + (res.isOutOfStock ? 'outofstock' : '') + '">' +
+             (isAppendMode ? '<span class="badge-saved">✅ 시트 기록됨</span>' : '') +
+             '<div class="result-top">' +
+             '<div class="result-img">' + imgHtml + '</div>' +
+             '<div class="result-info">' +
+             '<h3 class="result-name">' + escapeHtml(res.name) + '</h3>' +
+             '<div class="result-code">' + escapeHtml(res.code) + '</div>' +
+             '</div>' +
+             '</div>' +
+             '<div class="result-loc ' + locClass + '">' + locIcon + ' ' +
+             escapeHtml(res.zone) + ' / ' + escapeHtml(res.loc) +
+             (res.isOutOfStock ? ' (재고 0)' : '') +
+             '</div>' +
+             '<div class="result-meta">' +
+             (res.shortCode ? '<span>숏: ' + escapeHtml(res.shortCode) + '</span>' : '') +
+             (res.supplier ? '<span>공급: ' + escapeHtml(res.supplier) + '</span>' : '') +
+             (res.storeType ? '<span>' + escapeHtml(res.storeType) + '</span>' : '') +
+             '</div>' +
+             shareHtml +
+             '</div>';
+
+      lastResult = res;
+      pickedReason = '';
+      showToast(isAppendMode ? '✅ 기록됨: ' + res.name : '🔍 ' + res.name, 'success');
+      pushRecent(code, res.name, true);
+    }
+    document.getElementById('resultArea').innerHTML = html;
+  }
+
+  // ========== 공유 ==========
+  function toggleSharePanel() {
+    var panel = document.getElementById('share-panel');
+    var btn = document.getElementById('share-toggle-btn');
+    if (!panel) return;
+    var isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    if (btn) {
+      btn.classList.toggle('expanded', !isOpen);
+      btn.textContent = isOpen ? '📤 슬랙에 공유' : '✕ 닫기';
+    }
+    if (!isOpen) {
+      pickedReason = '';
+      var memo = document.getElementById('memo-input');
+      if (memo) { memo.value = ''; memo.classList.remove('required'); }
+      var chips = document.querySelectorAll('.reason-chip');
+      for (var i = 0; i < chips.length; i++) chips[i].classList.remove('active');
+      removeSnap();
+      checkSendReady();
+    }
+  }
+  function pickReason(btn) {
+    pickedReason = btn.getAttribute('data-reason');
+    var chips = document.querySelectorAll('.reason-chip');
+    for (var i = 0; i < chips.length; i++) chips[i].classList.remove('active');
+    btn.classList.add('active');
+    checkSendReady();
+  }
+  function checkSendReady() {
+    var btn = document.getElementById('send-btn');
+    var memo = document.getElementById('memo-input');
+    if (!btn || !memo) return;
+    var needMemo = (pickedReason === '기타');
+    var memoOk = !needMemo || memo.value.trim().length > 0;
+    memo.classList.toggle('required', needMemo && memo.value.trim().length === 0);
+    btn.disabled = !pickedReason || !memoOk;
+  }
+
+  function onSnapPicked(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function() {
+        var maxSide = 1280;
+        var w = img.width, h = img.height;
+        if (w > h && w > maxSide) { h = Math.round(h * maxSide / w); w = maxSide; }
+        else if (h >= w && h > maxSide) { w = Math.round(w * maxSide / h); h = maxSide; }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        snapBase64 = canvas.toDataURL('image/jpeg', 0.75);
+        var sizeKB = Math.round((snapBase64.length * 0.75) / 1024);
+        document.getElementById('snap-img').src = snapBase64;
+        document.getElementById('snap-info').textContent = w + '×' + h + ' · ~' + sizeKB + 'KB';
+        document.getElementById('snap-preview').style.display = 'block';
+        var sb = document.getElementById('snap-btn');
+        sb.classList.add('has-photo');
+        sb.textContent = '🔄 사진 다시 촬영';
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  function removeSnap() {
+    snapBase64 = '';
+    var prev = document.getElementById('snap-preview');
+    if (prev) prev.style.display = 'none';
+    var sb = document.getElementById('snap-btn');
+    if (sb) { sb.classList.remove('has-photo'); sb.textContent = '📸 현장 사진 촬영 (선택)'; }
+    var inp = document.getElementById('snap-input');
+    if (inp) inp.value = '';
+  }
+
+  function sendShare() {
+    if (!lastResult || !pickedReason) return;
+    var memoEl = document.getElementById('memo-input');
+    var memo = memoEl ? memoEl.value.trim() : '';
+    if (pickedReason === '기타' && !memo) { showToast('기타 사유는 메모 필수', 'danger'); return; }
+
+    var btn = document.getElementById('send-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '전송 중...'; }
+
+    var payload = {
+      scan: lastResult.scan, code: lastResult.code, name: lastResult.name,
+      zone: lastResult.zone, loc: lastResult.loc,
+      shortCode: lastResult.shortCode, supplier: lastResult.supplier, storeType: lastResult.storeType,
+      stockQty: lastResult.stockQty, isOutOfStock: lastResult.isOutOfStock,
+      img: lastResult.img, reason: pickedReason, memo: memo, worker: getWorker()
+    };
+
+    if (snapBase64) {
+      if (btn) btn.textContent = '사진 업로드 중...';
+      apiCall('uploadSnap', { base64Data: snapBase64, scanCode: lastResult.code })
+        .then(function(res) {
+          if (res && res.ok) { payload.snapshotUrl = res.url; actuallySend(payload, btn); }
+          else { showToast('❌ 사진 업로드 실패: ' + (res && res.error ? res.error : ''), 'danger'); resetBtn(btn); }
+        })
+        .catch(function(e) { showToast('❌ 업로드 오류: ' + e.message, 'danger'); resetBtn(btn); });
+    } else {
+      actuallySend(payload, btn);
+    }
+  }
+  function actuallySend(payload, btn) {
+    if (btn) btn.textContent = '슬랙 전송 중...';
+    apiCall('share', { payload: payload })
+      .then(function(res) {
+        if (res && res.ok) { showToast('✅ 슬랙 전송 완료', 'success'); toggleSharePanel(); }
+        else { showToast('❌ ' + (res && res.error ? res.error : '전송 실패'), 'danger'); resetBtn(btn); }
+      })
+      .catch(function(e) { showToast('❌ 서버 오류: ' + e.message, 'danger'); resetBtn(btn); });
+  }
+  function resetBtn(btn) { if (btn) { btn.disabled = false; btn.textContent = '보내기'; } }
+
+  // ========== 작업자 / 토스트 / 최근 ==========
+  function getWorker() { try { return localStorage.getItem(WORKER_KEY) || ''; } catch (e) { return ''; } }
+  function setWorker() {
+    var name = prompt('작업자 이름 (슬랙 공유 시 표시됩니다)', getWorker() || '');
+    if (name === null) return;
+    try { localStorage.setItem(WORKER_KEY, name.trim()); } catch (e) {}
+    updateWorkerLabel();
+  }
+  function updateWorkerLabel() {
+    var w = getWorker();
+    var el = document.getElementById('workerLabel');
+    if (el) el.textContent = w ? '👤 ' + w : '👤 이름 설정';
+  }
+
+  function pushRecent(code, name, ok) {
+    var t = new Date();
+    var ts = pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ':' + pad2(t.getSeconds());
+    recent.unshift({ ts: ts, code: code, name: name, ok: ok });
+    if (recent.length > 10) recent.pop();
+    renderRecent();
+  }
+  function renderRecent() {
+    var area = document.getElementById('recentArea');
+    if (recent.length === 0) { area.style.display = 'none'; return; }
+    area.style.display = 'block';
+    document.getElementById('recentCount').textContent = recent.length;
+    var html = '';
+    for (var i = 0; i < recent.length; i++) {
+      var r = recent[i];
+      html += '<div class="recent-row">' +
+              '<span class="ts">' + r.ts + '</span>' +
+              '<span class="nm">' + escapeHtml(r.name) + '</span>' +
+              '<span class="' + (r.ok ? 'ok' : 'ng') + '">' + (r.ok ? '✓' : '✗') + '</span>' +
+              '</div>';
+    }
+    document.getElementById('recentRows').innerHTML = html;
+  }
+
+  function pad2(n) { return n < 10 ? '0' + n : n; }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function escapeAttr(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+  function showToast(msg, kind) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(function() { t.className = 'toast'; }, 1800);
+  }
+
+  updateWorkerLabel();
+</script>
+
+</body>
+</html>
