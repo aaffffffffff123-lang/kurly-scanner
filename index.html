@@ -42,12 +42,14 @@
   }
   .mode-btn.active.append { background: var(--danger); color: white; }
   .mode-btn.active.lookup { background: var(--primary); color: white; }
+  .mode-btn.active.zone { background: #7c3aed; color: white; }
   .mode-banner {
     text-align: center; padding: 8px; border-radius: 8px;
     margin-bottom: 10px; font-size: 13px; font-weight: 700;
   }
   .mode-banner.append { background: #fee2e2; color: #991b1b; }
   .mode-banner.lookup { background: var(--primary-light); color: var(--primary-dark); }
+  .mode-banner.zone { background: #ede9fe; color: #5b21b6; }
 
   #reader {
     width: 100%; border-radius: 14px; overflow: hidden;
@@ -223,8 +225,7 @@
   .toast.danger { background: var(--danger); }
   .toast.success { background: var(--success); }
 
-
-.loading-spinner {
+  .loading-spinner {
     width: 28px; height: 28px;
     border: 3px solid var(--border);
     border-top-color: var(--primary);
@@ -240,7 +241,63 @@
     margin-bottom: 12px;
   }
 
-  
+  /* ===== 존분류 모드 ===== */
+  .zone-display {
+    margin-top: 12px;
+    border-radius: 16px;
+    padding: 32px 16px;
+    text-align: center;
+    min-height: 220px;
+    display: flex; flex-direction: column; justify-content: center;
+    background: #1e293b; color: #f1f5f9;
+    border: 3px solid #334155;
+    transition: background 0.12s, border 0.12s;
+    position: relative;
+  }
+  .zone-display.idle { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
+  .zone-display .zone-text {
+    font-size: 84px; font-weight: 900;
+    line-height: 1.0; letter-spacing: -0.03em;
+    word-break: break-all;
+  }
+  .zone-display .zone-sub {
+    margin-top: 10px; font-size: 13px; opacity: 0.7;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .zone-display .streak {
+    position: absolute; top: 12px; right: 14px;
+    background: rgba(0,0,0,0.35); color: white;
+    padding: 4px 10px; border-radius: 14px;
+    font-size: 13px; font-weight: 800;
+  }
+  .zone-display.flash { animation: zoneFlash 0.3s; }
+  @keyframes zoneFlash {
+    0% { transform: scale(0.97); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  .zone-stats {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px;
+  }
+  .zone-stats .chip {
+    padding: 5px 10px; border-radius: 14px;
+    font-size: 12px; font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid transparent;
+  }
+  .zone-stats .chip .c { opacity: 0.7; margin-left: 4px; }
+  .zone-bar {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px; margin-top: 10px;
+  }
+  .zone-bar .stat {
+    background: white; border: 1px solid var(--border);
+    border-radius: 9px; padding: 7px 4px; text-align: center;
+  }
+  .zone-bar .stat .lbl { font-size: 10px; color: var(--text-muted); font-weight: 700; }
+  .zone-bar .stat .num { font-size: 18px; font-weight: 900; font-family: monospace; }
+  .zone-bar .stat.pending.warn { background: #fee2e2; border-color: #ef4444; }
+  .zone-bar .stat.pending.warn .num { color: #b91c1c; }
 </style>
 </head>
 <body>
@@ -251,8 +308,9 @@
   </div>
 
   <div class="mode-bar">
-   <button class="mode-btn append" id="modeAppend" onclick="setMode('append')">📝 시트 누적</button>
-<button class="mode-btn lookup active" id="modeLookup" onclick="setMode('lookup')">🔍 조회만</button>
+    <button class="mode-btn append" id="modeAppend" onclick="setMode('append')">📝 시트 누적</button>
+    <button class="mode-btn lookup active" id="modeLookup" onclick="setMode('lookup')">🔍 조회만</button>
+    <button class="mode-btn zone" id="modeZone" onclick="setMode('zone')">⚡ 존분류</button>
   </div>
   <div class="mode-banner lookup" id="modeBanner">🔍 조회만 — 시트엔 기록되지 않습니다</div>
 
@@ -270,6 +328,21 @@
     <button onclick="submitManual()">처리</button>
   </div>
 
+  <!-- 존분류 모드 영역 -->
+  <div id="zoneArea" style="display:none;">
+    <div class="zone-display idle" id="zoneBox">
+      <div class="zone-text" id="zoneText">⚡</div>
+      <div class="zone-sub" id="zoneSub">캐시 로딩 또는 스캔 대기</div>
+      <div class="streak" id="zoneStreak" style="display:none;"></div>
+    </div>
+    <div class="zone-bar">
+      <div class="stat"><div class="lbl">스캔</div><div class="num" id="zCntScan">0</div></div>
+      <div class="stat"><div class="lbl">기록</div><div class="num" id="zCntSaved">0</div></div>
+      <div class="stat pending" id="zStatPending"><div class="lbl">대기</div><div class="num" id="zCntPending">0</div></div>
+    </div>
+    <div class="zone-stats" id="zoneStats"></div>
+  </div>
+
   <div id="resultArea"></div>
 
   <div class="recent-list" id="recentArea" style="display:none;">
@@ -282,7 +355,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-  // ⚠️ GAS 배포 URL — 너의 URL로 박혀있음
+  // ⚠️ GAS 배포 URL
   var GAS_URL = 'https://script.google.com/a/macros/kurlycorp.com/s/AKfycbxdoAEyhJZIHkS10YbagCd16wgxGc2kgDyUFQ-juVd6HGrkawvyCg1JTLKRPG7oaO_7xQ/exec';
 
   var WORKER_KEY = 'worker_name_v1';
@@ -293,18 +366,52 @@
   var lastScan = '';
   var lastScanTime = 0;
   var COOLDOWN_MS = 1800;
+  var ZONE_COOLDOWN_MS = 1200;     // 존 모드 — 더 짧게
   var recent = [];
   var lastResult = null;
   var pickedReason = '';
   var snapBase64 = '';
 
-  // ========== 공통 API 호출 (GAS doPost) ==========
+  // ===== 존분류 모드 상태 =====
+  var zoneCache = null;
+  var zoneCacheLoading = false;
+  var zoneQueue = [];
+  var zoneCntScan = 0;
+  var zoneCntSaved = 0;
+  var zoneStreak = { zone: null, count: 0 };
+  var zoneStats = {};
+  var zoneFlushTimer = null;
+  var ZONE_BATCH_SIZE = 10;
+  var ZONE_FLUSH_MS = 3000;
+  var ZONE_QKEY = 'zone_queue_v1';
+
+  // 존코드 첫 글자 기준 색상
+  var ZONE_COLOR_MAP = {
+    '1': { bg: '#1e3a8a', fg: '#dbeafe' },
+    '2': { bg: '#14532d', fg: '#dcfce7' },
+    '3': { bg: '#7c2d12', fg: '#fed7aa' },
+    '4': { bg: '#581c87', fg: '#e9d5ff' },
+    '5': { bg: '#831843', fg: '#fce7f3' },
+    '6': { bg: '#134e4a', fg: '#ccfbf1' }
+  };
+  var ZONE_COLOR_FALLBACK = { bg: '#334155', fg: '#f1f5f9' };
+  var ZONE_COLOR_OUT = { bg: '#78350f', fg: '#fef3c7' };
+  var ZONE_COLOR_NG = { bg: '#7f1d1d', fg: '#fee2e2' };
+
+  function getZoneColor(zone) {
+    if (!zone) return ZONE_COLOR_NG;
+    if (zone === '재고없음') return ZONE_COLOR_OUT;
+    if (zone === '데이터없음') return ZONE_COLOR_NG;
+    var first = zone.charAt(0);
+    return ZONE_COLOR_MAP[first] || ZONE_COLOR_FALLBACK;
+  }
+
+  // ========== 공통 API ==========
   function apiCall(action, payload) {
     var body = Object.assign({ action: action }, payload || {});
     return fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(body)
-      // Content-Type 명시 안 함 → text/plain → CORS preflight 회피
     })
     .then(function(res) { return res.text(); })
     .then(function(text) {
@@ -318,26 +425,35 @@
     currentMode = mode;
     document.getElementById('modeAppend').classList.toggle('active', mode === 'append');
     document.getElementById('modeLookup').classList.toggle('active', mode === 'lookup');
+    document.getElementById('modeZone').classList.toggle('active', mode === 'zone');
+
     var banner = document.getElementById('modeBanner');
-    if (mode === 'append') {
-      banner.className = 'mode-banner append';
-      banner.textContent = '📝 스캔 시 시트에 자동 기록됩니다';
-    } else {
-      banner.className = 'mode-banner lookup';
-      banner.textContent = '🔍 조회만 — 시트엔 기록되지 않습니다';
+    banner.className = 'mode-banner ' + mode;
+    if (mode === 'append') banner.textContent = '📝 스캔 시 시트에 자동 기록됩니다';
+    else if (mode === 'lookup') banner.textContent = '🔍 조회만 — 시트엔 기록되지 않습니다';
+    else if (mode === 'zone') banner.textContent = '⚡ 존분류 — 즉시 lookup / 백그라운드 배치 기록 / 카메라 연속 스캔';
+
+    // 영역 토글
+    document.getElementById('resultArea').style.display = (mode === 'zone') ? 'none' : '';
+    document.getElementById('recentArea').style.display = (mode === 'zone') ? 'none' : '';
+    document.getElementById('zoneArea').style.display = (mode === 'zone') ? 'block' : 'none';
+
+    // 존 모드 들어올 때 캐시 로드
+    if (mode === 'zone' && !zoneCache && !zoneCacheLoading) {
+      loadZoneCache();
     }
-    showToast(mode === 'append' ? '시트 누적 모드' : '조회 전용 모드', mode === 'append' ? 'danger' : '');
+
+    showToast(
+      mode === 'append' ? '시트 누적 모드' :
+      mode === 'lookup' ? '조회 전용 모드' : '⚡ 존분류 모드',
+      mode === 'append' ? 'danger' : ''
+    );
   }
 
   // ========== 카메라 ==========
-function startCam() {
+  function startCam() {
     if (camRunning) return;
-
-    // 이전 인스턴스 정리하고 항상 새로
-    if (html5QrCode) {
-      try { html5QrCode.clear(); } catch(e) {}
-      html5QrCode = null;
-    }
+    if (html5QrCode) { try { html5QrCode.clear(); } catch(e) {} html5QrCode = null; }
     html5QrCode = new Html5Qrcode('reader');
 
     var config = {
@@ -378,16 +494,14 @@ function startCam() {
       showToast(msg, 'danger');
     });
   }
-  
-function stopCam() {
+
+  function stopCam() {
     if (!html5QrCode) return;
-    // 상태 먼저 바꾸고 → 비동기로 stop (잔여 콜백 차단)
     var inst = html5QrCode;
     html5QrCode = null;
     camRunning = false;
     document.getElementById('startBtn').disabled = false;
     document.getElementById('stopBtn').disabled = true;
-
     inst.stop().then(function() {
       try { inst.clear(); } catch (e) {}
     }).catch(function() {
@@ -410,24 +524,32 @@ function stopCam() {
   }
 
   function onScan(code) {
-    if (!camRunning) return;                      // ← 이 줄 추가
+    if (!camRunning) return;
     var now = Date.now();
-    if (code === lastScan && (now - lastScanTime) < COOLDOWN_MS) return;
+    var cd = (currentMode === 'zone') ? ZONE_COOLDOWN_MS : COOLDOWN_MS;
+    if (code === lastScan && (now - lastScanTime) < cd) return;
     lastScan = code; lastScanTime = now;
-    if (navigator.vibrate) navigator.vibrate(60);
-    stopCam();
-    processScan(code);
+    if (navigator.vibrate) navigator.vibrate(currentMode === 'zone' ? 40 : 60);
+
+    if (currentMode === 'zone') {
+      // 카메라 계속 켜둠 — 연속 스캔
+      processZoneScan(code);
+    } else {
+      stopCam();
+      processScan(code);
+    }
   }
 
   function submitManual() {
     var v = document.getElementById('manualInput').value.trim();
     if (!v) return;
     document.getElementById('manualInput').value = '';
-    processScan(v);
+    if (currentMode === 'zone') processZoneScan(v);
+    else processScan(v);
   }
 
-  // ========== 스캔 처리 ==========
- function processScan(code) {
+  // ========== 일반 모드 (append / lookup) ==========
+  function processScan(code) {
     document.getElementById('resultArea').innerHTML =
       '<div class="loading-card">' +
       '<div class="loading-spinner"></div>' +
@@ -445,6 +567,7 @@ function stopCam() {
         showToast('서버 오류: ' + err.message, 'danger');
       });
   }
+
   function renderResult(code, res) {
     if (res && res.error) { showToast(res.error, 'danger'); return; }
 
@@ -525,6 +648,168 @@ function stopCam() {
       pushRecent(code, res.name, true);
     }
     document.getElementById('resultArea').innerHTML = html;
+  }
+
+  // ========== 존분류 모드 ==========
+  function loadZoneCache() {
+    zoneCacheLoading = true;
+    showToast('캐시 로딩 중...', '');
+    apiCall('getZoneLookup', {})
+      .then(function(res) {
+        zoneCacheLoading = false;
+        if (res && res.ok) {
+          zoneCache = res.map;
+          showToast('✅ 캐시 로드: ' + res.count + '건', 'success');
+        } else {
+          showToast('❌ 캐시 실패: ' + (res && res.err || '?'), 'danger');
+        }
+      })
+      .catch(function(e) {
+        zoneCacheLoading = false;
+        showToast('❌ ' + e.message, 'danger');
+      });
+
+    // 미전송 큐 복원
+    try {
+      var q = JSON.parse(localStorage.getItem(ZONE_QKEY) || '[]');
+      if (q.length > 0) {
+        zoneQueue = q;
+        updateZoneCounters();
+        showToast('⚠️ 미전송 ' + q.length + '건 복원', 'danger');
+        scheduleZoneFlush();
+      }
+    } catch (e) {}
+  }
+
+  function processZoneScan(code) {
+    if (!zoneCache) {
+      showToast('캐시 로딩 중...', 'danger');
+      return;
+    }
+    var upper = String(code).trim().toUpperCase();
+    var zone = zoneCache[upper];
+    var found = !!zone;
+    var displayZone = found ? zone : '데이터없음';
+
+    // 즉시 화면
+    renderZoneBig(code, displayZone, found);
+
+    // 큐 push + 백업
+    var ts = nowTs();
+    zoneQueue.push({ scan: code, zone: displayZone, ts: ts });
+    try { localStorage.setItem(ZONE_QKEY, JSON.stringify(zoneQueue)); } catch (e) {}
+
+    zoneCntScan++;
+    zoneStats[displayZone] = (zoneStats[displayZone] || 0) + 1;
+    renderZoneStats();
+    updateZoneCounters();
+    scheduleZoneFlush();
+
+    beepZone(found ? (zone === '재고없음' ? 'warn' : 'ok') : 'ng');
+  }
+
+  function renderZoneBig(scan, zone, found) {
+    var box = document.getElementById('zoneBox');
+    var color = getZoneColor(zone);
+    box.classList.remove('idle');
+    box.style.background = color.bg;
+    box.style.color = color.fg;
+    box.style.borderColor = color.fg;
+    document.getElementById('zoneText').textContent = zone;
+    document.getElementById('zoneSub').textContent = scan;
+
+    if (zone === zoneStreak.zone) zoneStreak.count++;
+    else { zoneStreak.zone = zone; zoneStreak.count = 1; }
+
+    var streakEl = document.getElementById('zoneStreak');
+    if (zoneStreak.count >= 2) {
+      streakEl.textContent = '×' + zoneStreak.count;
+      streakEl.style.display = 'block';
+    } else {
+      streakEl.style.display = 'none';
+    }
+
+    box.classList.remove('flash');
+    void box.offsetWidth;
+    box.classList.add('flash');
+  }
+
+  function renderZoneStats() {
+    var keys = Object.keys(zoneStats).sort();
+    var html = '';
+    keys.forEach(function(k) {
+      var c = getZoneColor(k);
+      html += '<span class="chip" style="background:' + c.bg + ';color:' + c.fg + ';">' +
+              escapeHtml(k) + '<span class="c">' + zoneStats[k] + '</span></span>';
+    });
+    document.getElementById('zoneStats').innerHTML = html;
+  }
+
+  function updateZoneCounters() {
+    document.getElementById('zCntScan').textContent = zoneCntScan;
+    document.getElementById('zCntSaved').textContent = zoneCntSaved;
+    document.getElementById('zCntPending').textContent = zoneQueue.length;
+    document.getElementById('zStatPending').classList.toggle('warn', zoneQueue.length > 0);
+  }
+
+  function scheduleZoneFlush() {
+    if (zoneQueue.length >= ZONE_BATCH_SIZE) { flushZoneQueue(); return; }
+    if (zoneFlushTimer) return;
+    zoneFlushTimer = setTimeout(function() {
+      zoneFlushTimer = null;
+      flushZoneQueue();
+    }, ZONE_FLUSH_MS);
+  }
+
+  var zoneFlushing = false;
+  function flushZoneQueue() {
+    if (zoneFlushing) return;
+    if (zoneQueue.length === 0) return;
+    zoneFlushing = true;
+    var batch = zoneQueue.slice(0, 50);
+
+    apiCall('appendZoneBatch', { items: batch })
+      .then(function(res) {
+        zoneFlushing = false;
+        if (res && res.ok) {
+          zoneQueue.splice(0, batch.length);
+          try { localStorage.setItem(ZONE_QKEY, JSON.stringify(zoneQueue)); } catch (e) {}
+          zoneCntSaved += res.count;
+          updateZoneCounters();
+          if (zoneQueue.length > 0) setTimeout(flushZoneQueue, 100);
+        } else {
+          setTimeout(flushZoneQueue, 3000);
+          showToast('전송 실패 — 재시도중', 'danger');
+        }
+      })
+      .catch(function() {
+        zoneFlushing = false;
+        setTimeout(flushZoneQueue, 5000);
+        showToast('네트워크 실패 — 재시도중', 'danger');
+      });
+  }
+
+  var zoneAudio = null;
+  function beepZone(kind) {
+    try {
+      if (!zoneAudio) zoneAudio = new (window.AudioContext || window.webkitAudioContext)();
+      var freq = kind === 'ok' ? 1400 : kind === 'warn' ? 700 : 250;
+      var dur = kind === 'ng' ? 0.2 : 0.05;
+      var osc = zoneAudio.createOscillator();
+      var gain = zoneAudio.createGain();
+      osc.frequency.value = freq;
+      osc.type = kind === 'ng' ? 'sawtooth' : 'square';
+      gain.gain.value = 0.12;
+      osc.connect(gain); gain.connect(zoneAudio.destination);
+      osc.start();
+      osc.stop(zoneAudio.currentTime + dur);
+    } catch (e) {}
+  }
+
+  function nowTs() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()) +
+           ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
   }
 
   // ========== 공유 ==========
@@ -695,6 +980,14 @@ function stopCam() {
     clearTimeout(window._toastTimer);
     window._toastTimer = setTimeout(function() { t.className = 'toast'; }, 1800);
   }
+
+  // 페이지 떠나기 전 — 존 모드 미전송 건 있으면 경고
+  window.addEventListener('beforeunload', function(e) {
+    if (zoneQueue.length > 0) {
+      e.preventDefault();
+      e.returnValue = '미전송 ' + zoneQueue.length + '건이 있습니다.';
+    }
+  });
 
   updateWorkerLabel();
 </script>
