@@ -309,10 +309,10 @@
 
   <div class="mode-bar">
     <button class="mode-btn append" id="modeAppend" onclick="setMode('append')">📝 시트 누적</button>
-    <button class="mode-btn lookup active" id="modeLookup" onclick="setMode('lookup')">🔍 조회만</button>
-    <button class="mode-btn zone" id="modeZone" onclick="setMode('zone')">⚡ 존분류</button>
+    <button class="mode-btn lookup" id="modeLookup" onclick="setMode('lookup')">🔍 조회만</button>
+    <button class="mode-btn zone active" id="modeZone" onclick="setMode('zone')">⚡ 존분류</button>
   </div>
-  <div class="mode-banner lookup" id="modeBanner">🔍 조회만 — 시트엔 기록되지 않습니다</div>
+  <div class="mode-banner zone" id="modeBanner">⚡ 존분류 — 즉시 lookup / 백그라운드 배치 기록 / 카메라 연속 스캔</div>
 
   <div id="reader"></div>
 
@@ -329,7 +329,7 @@
   </div>
 
   <!-- 존분류 모드 영역 -->
-  <div id="zoneArea" style="display:none;">
+  <div id="zoneArea" style="display:block;">
     <div class="zone-display idle" id="zoneBox">
       <div class="zone-text" id="zoneText">⚡</div>
       <div class="zone-sub" id="zoneSub">캐시 로딩 또는 스캔 대기</div>
@@ -343,7 +343,7 @@
     <div class="zone-stats" id="zoneStats"></div>
   </div>
 
-  <div id="resultArea"></div>
+  <div id="resultArea" style="display:none;"></div>
 
   <div class="recent-list" id="recentArea" style="display:none;">
     <h4>📋 이번 세션 스캔 (<span id="recentCount">0</span>건)</h4>
@@ -359,7 +359,7 @@
   var GAS_URL = 'https://script.google.com/a/macros/kurlycorp.com/s/AKfycbxdoAEyhJZIHkS10YbagCd16wgxGc2kgDyUFQ-juVd6HGrkawvyCg1JTLKRPG7oaO_7xQ/exec';
 
   var WORKER_KEY = 'worker_name_v1';
-  var currentMode = 'lookup';
+  var currentMode = 'zone';
   var html5QrCode = null;
   var camRunning = false;
   var currentFacing = 'environment';
@@ -990,6 +990,8 @@
   });
 
   updateWorkerLabel();
+  // 기본 모드가 zone이므로 페이지 로드 시 캐시 즉시 로드
+  loadZoneCache();
 </script>
 
 </body>
