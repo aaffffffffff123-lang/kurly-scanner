@@ -303,9 +303,10 @@
 <body>
 
 <div class="wrap">
-  <div class="worker-bar">
+  <div class="worker-bar" style="justify-content: space-between;">
+    <span class="worker-label" onclick="reloadZoneCache()">🔄 캐시 새로고침</span>
     <span class="worker-label" id="workerLabel" onclick="setWorker()">👤 이름 설정</span>
-  </div>
+</div>
 
   <div class="mode-bar">
     <button class="mode-btn append" id="modeAppend" onclick="setMode('append')">📝 시트 누적</button>
@@ -383,7 +384,8 @@
   var zoneFlushTimer = null;
   var ZONE_BATCH_SIZE = 10;
   var ZONE_FLUSH_MS = 3000;
-  var ZONE_QKEY = 'zone_queue_v1';
+  var zoneCacheLoadedAt = 0;
+  var ZONE_CACHE_MAX_AGE_MS = 60 * 60 * 1000;   // 1시간
 
   // 존코드 첫 글자 기준 색상
   var ZONE_COLOR_MAP = {
@@ -650,43 +652,59 @@
     document.getElementById('resultArea').innerHTML = html;
   }
 
-  // ========== 존분류 모드 ==========
-  function loadZoneCache() {
+function loadZoneCache(silent) {
+    if (zoneCacheLoading) {
+      if (!silent) showToast('이미 로딩 중...', '');
+      return;
+    }
     zoneCacheLoading = true;
-    showToast('캐시 로딩 중...', '');
+    if (!silent) showToast('캐시 로딩 중...', '');
     apiCall('getZoneLookup', {})
       .then(function(res) {
         zoneCacheLoading = false;
         if (res && res.ok) {
           zoneCache = res.map;
-          showToast('✅ 캐시 로드: ' + res.count + '건', 'success');
+          zoneCacheLoadedAt = Date.now();
+          if (!silent) showToast('✅ 캐시 로드: ' + res.count + '건', 'success');
         } else {
-          showToast('❌ 캐시 실패: ' + (res && res.err || '?'), 'danger');
+          if (!silent) showToast('❌ 캐시 실패: ' + (res && res.err || '?'), 'danger');
         }
       })
       .catch(function(e) {
         zoneCacheLoading = false;
-        showToast('❌ ' + e.message, 'danger');
+        if (!silent) showToast('❌ ' + e.message, 'danger');
       });
 
-    // 미전송 큐 복원
-    try {
-      var q = JSON.parse(localStorage.getItem(ZONE_QKEY) || '[]');
-      if (q.length > 0) {
-        zoneQueue = q;
-        updateZoneCounters();
-        showToast('⚠️ 미전송 ' + q.length + '건 복원', 'danger');
-        scheduleZoneFlush();
-      }
-    } catch (e) {}
+    // 미전송 큐 복원 — 첫 로드 때만
+    if (!silent) {
+      try {
+        var q = JSON.parse(localStorage.getItem(ZONE_QKEY) || '[]');
+        if (q.length > 0) {
+          zoneQueue = q;
+          updateZoneCounters();
+          showToast('⚠️ 미전송 ' + q.length + '건 복원', 'danger');
+          scheduleZoneFlush();
+        }
+      } catch (e) {}
+    }
   }
 
+  function reloadZoneCache() {
+    loadZoneCache(false);
+  }
+
+  
   function processZoneScan(code) {
     if (!zoneCache) {
       showToast('캐시 로딩 중...', 'danger');
       return;
     }
+    // 1시간 이상 지났으면 백그라운드 자동 갱신 (현재 스캔은 옛 캐시로 그대로 진행)
+    if (Date.now() - zoneCacheLoadedAt > ZONE_CACHE_MAX_AGE_MS && !zoneCacheLoading) {
+      loadZoneCache(true);
+    }
     var upper = String(code).trim().toUpperCase();
+    
     var zone = zoneCache[upper];
     var found = !!zone;
     var displayZone = found ? zone : '데이터없음';
