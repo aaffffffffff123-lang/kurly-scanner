@@ -51,6 +51,22 @@
   .mode-banner.lookup { background: var(--primary-light); color: var(--primary-dark); }
   .mode-banner.zone { background: #ede9fe; color: #5b21b6; }
 
+
+/* ===== 사유 토글 (append / zone) ===== */
+  .reason-toggle { display: flex; gap: 6px; margin-bottom: 12px; }
+  .reason-toggle .rt-btn {
+    flex: 1; padding: 13px 8px;
+    background: white; border: 2px solid var(--border);
+    border-radius: 10px; cursor: pointer;
+    font-size: 15px; font-weight: 800; color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .reason-toggle .rt-btn.restock.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .reason-toggle .rt-btn.damage.active  { background: var(--danger);  color: white; border-color: var(--danger); }
+
+
+
+  
   #reader {
     width: 100%; border-radius: 14px; overflow: hidden;
     background: #000; min-height: 280px;
@@ -315,6 +331,15 @@
   </div>
   <div class="mode-banner zone" id="modeBanner">⚡ 존분류 — 즉시 lookup / 백그라운드 배치 기록 / 카메라 연속 스캔</div>
 
+
+
+<div class="reason-toggle" id="reasonToggle">
+    <button class="rt-btn restock active" id="rtRestock" onclick="setReason('재진열')">🔄 재진열</button>
+    <button class="rt-btn damage" id="rtDamage" onclick="setReason('파손')">💔 파손</button>
+  </div>
+
+
+  
   <div id="reader"></div>
 
   <div class="cam-controls">
@@ -361,6 +386,10 @@
 
   var WORKER_KEY = 'worker_name_v1';
   var currentMode = 'zone';
+
+var currentReason = '재진열';      // ★ 사유 토글 (append/zone 모드)
+  var ZONE_QKEY = 'zone_queue_v1';   // ★ 누락돼 있던 큐 백업 키 — 미전송 복원 정상화
+  
   var html5QrCode = null;
   var camRunning = false;
   var currentFacing = 'environment';
@@ -422,7 +451,10 @@
     });
   }
 
-  // ========== 모드 토글 ==========
+
+
+
+
   function setMode(mode) {
     currentMode = mode;
     document.getElementById('modeAppend').classList.toggle('active', mode === 'append');
@@ -435,12 +467,14 @@
     else if (mode === 'lookup') banner.textContent = '🔍 조회만 — 시트엔 기록되지 않습니다';
     else if (mode === 'zone') banner.textContent = '⚡ 존분류 — 즉시 lookup / 백그라운드 배치 기록 / 카메라 연속 스캔';
 
+    // ★ 사유 토글 — 시트 기록 모드(append/zone)에서만 노출
+    document.getElementById('reasonToggle').style.display = (mode === 'lookup') ? 'none' : 'flex';
+
     // 영역 토글
     document.getElementById('resultArea').style.display = (mode === 'zone') ? 'none' : '';
     document.getElementById('recentArea').style.display = (mode === 'zone') ? 'none' : '';
     document.getElementById('zoneArea').style.display = (mode === 'zone') ? 'block' : 'none';
 
-    // 존 모드 들어올 때 캐시 로드
     if (mode === 'zone' && !zoneCache && !zoneCacheLoading) {
       loadZoneCache();
     }
@@ -451,6 +485,21 @@
       mode === 'append' ? 'danger' : ''
     );
   }
+
+
+
+
+  
+function setReason(reason) {
+    currentReason = reason;
+    document.getElementById('rtRestock').classList.toggle('active', reason === '재진열');
+    document.getElementById('rtDamage').classList.toggle('active', reason === '파손');
+    showToast(reason === '재진열' ? '🔄 재진열로 기록' : '💔 파손으로 기록', reason === '파손' ? 'danger' : '');
+  }
+
+
+
+  
 
   // ========== 카메라 ==========
   function startCam() {
@@ -550,7 +599,9 @@
     else processScan(v);
   }
 
-  // ========== 일반 모드 (append / lookup) ==========
+
+
+  
   function processScan(code) {
     document.getElementById('resultArea').innerHTML =
       '<div class="loading-card">' +
@@ -562,7 +613,7 @@
       '</div>' +
       '</div>';
 
-    apiCall('processScan', { scanCode: code, mode: currentMode })
+    apiCall('processScan', { scanCode: code, mode: currentMode, reason: currentReason })
       .then(function(res) { renderResult(code, res); })
       .catch(function(err) {
         document.getElementById('resultArea').innerHTML = '';
@@ -570,6 +621,14 @@
       });
   }
 
+
+
+
+
+
+
+
+  
   function renderResult(code, res) {
     if (res && res.error) { showToast(res.error, 'danger'); return; }
 
@@ -624,8 +683,8 @@
       }
 
       html = '<div class="result-card ' + (res.isOutOfStock ? 'outofstock' : '') + '">' +
-             (isAppendMode ? '<span class="badge-saved">✅ 시트 기록됨</span>' : '') +
-             '<div class="result-top">' +
+(isAppendMode ? '<span class="badge-saved">✅ ' + escapeHtml(currentReason) + ' 기록됨</span>' : '') +
+        '<div class="result-top">' +
              '<div class="result-img">' + imgHtml + '</div>' +
              '<div class="result-info">' +
              '<h3 class="result-name">' + escapeHtml(res.name) + '</h3>' +
@@ -693,28 +752,27 @@ function loadZoneCache(silent) {
     loadZoneCache(false);
   }
 
-  
+
+
+
   function processZoneScan(code) {
     if (!zoneCache) {
       showToast('캐시 로딩 중...', 'danger');
       return;
     }
-    // 1시간 이상 지났으면 백그라운드 자동 갱신 (현재 스캔은 옛 캐시로 그대로 진행)
     if (Date.now() - zoneCacheLoadedAt > ZONE_CACHE_MAX_AGE_MS && !zoneCacheLoading) {
       loadZoneCache(true);
     }
     var upper = String(code).trim().toUpperCase();
-    
+
     var zone = zoneCache[upper];
     var found = !!zone;
     var displayZone = found ? zone : '데이터없음';
 
-    // 즉시 화면
     renderZoneBig(code, displayZone, found);
 
-    // 큐 push + 백업
     var ts = nowTs();
-    zoneQueue.push({ scan: code, zone: displayZone, ts: ts });
+    zoneQueue.push({ scan: code, zone: displayZone, ts: ts, reason: currentReason });
     try { localStorage.setItem(ZONE_QKEY, JSON.stringify(zoneQueue)); } catch (e) {}
 
     zoneCntScan++;
@@ -725,6 +783,11 @@ function loadZoneCache(silent) {
 
     beepZone(found ? (zone === '재고없음' ? 'warn' : 'ok') : 'ng');
   }
+
+
+
+
+  
 
   function renderZoneBig(scan, zone, found) {
     var box = document.getElementById('zoneBox');
