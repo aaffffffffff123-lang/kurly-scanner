@@ -11,6 +11,7 @@
     --border: #e2e8f0;
     --primary: #4f46e5; --primary-dark: #4338ca; --primary-light: #eef2ff;
     --success: #059669; --danger: #dc2626; --warn: #d97706;
+    --cam-h: 190px;
   }
   * { box-sizing: border-box; }
   body {
@@ -65,14 +66,89 @@
   .reason-toggle .rt-btn.damage.active  { background: var(--danger);  color: white; border-color: var(--danger); }
 
 
+/* ===== 수량 입력 토글 ===== */
+  .qty-toggle-bar { margin-bottom: 12px; }
+  .qty-switch {
+    display: flex; align-items: center; gap: 12px;
+    background: white; border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px;
+    cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .qty-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .qty-switch-texts { flex: 1; min-width: 0; }
+  .qty-switch-label { display: block; font-size: 15px; font-weight: 800; color: var(--text); }
+  .qty-switch-desc { display: block; font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+  .qty-switch-track {
+    width: 50px; height: 30px; flex-shrink: 0;
+    background: #cbd5e1; border-radius: 15px;
+    position: relative; transition: background 0.2s;
+  }
+  .qty-switch-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 24px; height: 24px; background: white;
+    border-radius: 50%; transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .qty-switch input:checked ~ .qty-switch-track { background: var(--primary); }
+  .qty-switch input:checked ~ .qty-switch-track .qty-switch-thumb { transform: translateX(20px); }
+
+/* ===== 수량 입력 패드 ===== */
+  .qty-pad { margin-top: 14px; padding-top: 14px; border-top: 2px dashed var(--primary); }
+  .qty-pad-label {
+    font-size: 14px; font-weight: 800; color: var(--primary-dark);
+    margin-bottom: 12px; text-align: center;
+  }
+  .qty-stepper { display: flex; gap: 10px; align-items: stretch; margin-bottom: 10px; }
+  .qty-step-btn {
+    width: 64px; flex-shrink: 0;
+    background: var(--primary-light); color: var(--primary-dark);
+    border: 2px solid var(--primary); border-radius: 12px;
+    font-size: 34px; font-weight: 900; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-user-select: none; user-select: none;
+  }
+  .qty-step-btn:active { transform: scale(0.94); background: var(--primary); color: white; }
+  .qty-input {
+    flex: 1; min-width: 0; text-align: center;
+    font-size: 46px; font-weight: 900; line-height: 1;
+    border: 2px solid var(--border); border-radius: 12px;
+    outline: none; color: var(--text); padding: 8px 4px;
+    -moz-appearance: textfield; font-family: 'JetBrains Mono', monospace;
+  }
+  .qty-input:focus { border-color: var(--primary); }
+  .qty-input::-webkit-outer-spin-button,
+  .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .qty-quick { display: flex; gap: 6px; margin-bottom: 12px; }
+  .qty-quick-chip {
+    flex: 1; padding: 13px 0;
+    background: white; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 17px; font-weight: 800;
+    color: var(--text-muted); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .qty-quick-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .qty-quick-chip:active { transform: scale(0.95); }
+  .qty-actions { display: flex; gap: 8px; }
+  .qty-cancel, .qty-confirm {
+    padding: 16px 8px; border-radius: 12px;
+    font-size: 17px; font-weight: 900; cursor: pointer; border: none;
+  }
+  .qty-cancel { flex: 1; background: white; color: var(--text-muted); border: 1.5px solid var(--border); }
+  .qty-confirm { flex: 2; background: var(--success); color: white; }
+  .qty-confirm:active { background: #047857; }
+  .badge-saved.qty { background: var(--primary); }
+
 
   
   #reader {
     width: 100%; border-radius: 14px; overflow: hidden;
-    background: #000; min-height: 280px;
+    background: #000; height: var(--cam-h);
     border: 2px solid var(--border);
   }
-  #reader video { border-radius: 12px; }
+  #reader video {
+    width: 100% !important; height: 100% !important;
+    object-fit: cover; border-radius: 12px;
+  }
   .cam-controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
   .cam-btn {
     flex: 1; min-width: 110px; padding: 12px;
@@ -261,9 +337,9 @@
   .zone-display {
     margin-top: 12px;
     border-radius: 16px;
-    padding: 32px 16px;
+    padding: 22px 16px;
     text-align: center;
-    min-height: 220px;
+    min-height: 150px;
     display: flex; flex-direction: column; justify-content: center;
     background: #1e293b; color: #f1f5f9;
     border: 3px solid #334155;
@@ -272,7 +348,7 @@
   }
   .zone-display.idle { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
   .zone-display .zone-text {
-    font-size: 84px; font-weight: 900;
+    font-size: 62px; font-weight: 900;
     line-height: 1.0; letter-spacing: -0.03em;
     word-break: break-all;
   }
@@ -314,6 +390,65 @@
   .zone-bar .stat .num { font-size: 18px; font-weight: 900; font-family: monospace; }
   .zone-bar .stat.pending.warn { background: #fee2e2; border-color: #ef4444; }
   .zone-bar .stat.pending.warn .num { color: #b91c1c; }
+
+  /* ===== 존분류 수량 입력 ===== */
+  .zone-qty {
+    margin-top: 10px;
+    background: white; border: 2px solid var(--border);
+    border-radius: 14px; padding: 12px;
+    transition: border 0.15s, box-shadow 0.15s;
+  }
+  .zone-qty.active {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  }
+  .zone-qty-stepper { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+  .zone-qty-btn {
+    width: 60px; flex-shrink: 0;
+    background: #ede9fe; color: #5b21b6;
+    border: 2px solid #7c3aed; border-radius: 11px;
+    font-size: 32px; font-weight: 900; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-user-select: none; user-select: none;
+  }
+  .zone-qty-btn:active { transform: scale(0.94); background: #7c3aed; color: white; }
+  .zone-qty-input {
+    flex: 1; min-width: 0; text-align: center;
+    font-size: 42px; font-weight: 900; line-height: 1;
+    border: 2px solid var(--border); border-radius: 11px;
+    outline: none; color: var(--text); padding: 6px 4px;
+    font-family: 'JetBrains Mono', monospace; -moz-appearance: textfield;
+  }
+  .zone-qty-input:focus { border-color: #7c3aed; }
+  .zone-qty-input::-webkit-outer-spin-button,
+  .zone-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .zone-qty-quick { display: flex; gap: 6px; margin-bottom: 8px; }
+  .zone-qty-quick button {
+    flex: 1; padding: 12px 0;
+    background: #faf5ff; border: 1.5px solid #e9d5ff;
+    border-radius: 9px; font-size: 16px; font-weight: 800;
+    color: #6b21a8; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .zone-qty-quick button:active { background: #7c3aed; color: white; }
+  .zone-qty-commit {
+    width: 100%; padding: 15px;
+    background: var(--success); color: white;
+    border: none; border-radius: 11px;
+    font-size: 17px; font-weight: 900; cursor: pointer;
+    margin-bottom: 6px;
+  }
+  .zone-qty-commit:active { background: #047857; }
+  .zone-qty-hint {
+    text-align: center; font-size: 13px; font-weight: 700;
+    color: var(--text-muted); padding: 2px;
+  }
+  .zone-qty:not(.active) .zone-qty-input,
+  .zone-qty:not(.active) .zone-qty-btn,
+  .zone-qty:not(.active) .zone-qty-commit,
+  .zone-qty:not(.active) .zone-qty-quick button {
+    opacity: 0.45;
+  }
 </style>
 </head>
 <body>
@@ -336,6 +471,18 @@
 <div class="reason-toggle" id="reasonToggle">
     <button class="rt-btn restock active" id="rtRestock" onclick="setReason('재진열')">🔄 재진열</button>
     <button class="rt-btn damage" id="rtDamage" onclick="setReason('파손')">💔 파손</button>
+  </div>
+
+  <!-- 수량 입력 토글 (append 모드 전용) -->
+  <div class="qty-toggle-bar" id="qtyToggleBar" style="display:none;">
+    <label class="qty-switch">
+      <span class="qty-switch-texts">
+        <span class="qty-switch-label">🔢 수량 입력 모드</span>
+        <span class="qty-switch-desc">스캔할 때마다 수량을 직접 입력</span>
+      </span>
+      <input type="checkbox" id="qtyToggle" onchange="setQtyMode(this.checked)">
+      <span class="qty-switch-track"><span class="qty-switch-thumb"></span></span>
+    </label>
   </div>
 
 
@@ -361,6 +508,26 @@
       <div class="zone-sub" id="zoneSub">캐시 로딩 또는 스캔 대기</div>
       <div class="streak" id="zoneStreak" style="display:none;"></div>
     </div>
+
+    <div class="zone-qty" id="zoneQty" style="display:none;">
+      <div class="zone-qty-stepper">
+        <button class="zone-qty-btn" type="button" onclick="zoneQtyAdjust(-1)">−</button>
+        <input type="number" class="zone-qty-input" id="zoneQtyInput" value="1" min="1"
+               inputmode="numeric" pattern="[0-9]*" oninput="zoneQtyOnInput(this.value)"
+               onkeypress="if(event.key==='Enter')zoneQtyCommit()">
+        <button class="zone-qty-btn" type="button" onclick="zoneQtyAdjust(1)">+</button>
+      </div>
+      <div class="zone-qty-quick">
+        <button type="button" onclick="zoneQtyQuick(1)">1</button>
+        <button type="button" onclick="zoneQtyQuick(2)">2</button>
+        <button type="button" onclick="zoneQtyQuick(3)">3</button>
+        <button type="button" onclick="zoneQtyQuick(5)">5</button>
+        <button type="button" onclick="zoneQtyQuick(10)">10</button>
+      </div>
+      <button class="zone-qty-commit" type="button" onclick="zoneQtyCommit()">✓ 확정 · 다음 상품</button>
+      <div class="zone-qty-hint" id="zoneQtyHint">스캔하면 여기서 수량을 조정하세요</div>
+    </div>
+
     <div class="zone-bar">
       <div class="stat"><div class="lbl">스캔</div><div class="num" id="zCntScan">0</div></div>
       <div class="stat"><div class="lbl">기록</div><div class="num" id="zCntSaved">0</div></div>
@@ -389,6 +556,14 @@
 
 var currentReason = '재진열';      // ★ 사유 토글 (append/zone 모드)
   var ZONE_QKEY = 'zone_queue_v1';   // ★ 누락돼 있던 큐 백업 키 — 미전송 복원 정상화
+
+  // ★ 수량 입력 모드 (append 모드 전용)
+  var QTY_MODE_KEY = 'qty_mode_v1';
+  var qtyMode = false;
+  var qtyValue = 1;
+  var qtyScan = '';
+  var qtyRes = null;
+  var zonePending = null;   // 존 수량 모드 — 확정 대기 중인 1건
   
   var html5QrCode = null;
   var camRunning = false;
@@ -456,6 +631,7 @@ var currentReason = '재진열';      // ★ 사유 토글 (append/zone 모드)
 
 
   function setMode(mode) {
+    if (zonePending) commitZonePending();   // 모드 바꾸기 전 보류 건 확정
     currentMode = mode;
     document.getElementById('modeAppend').classList.toggle('active', mode === 'append');
     document.getElementById('modeLookup').classList.toggle('active', mode === 'lookup');
@@ -469,6 +645,10 @@ var currentReason = '재진열';      // ★ 사유 토글 (append/zone 모드)
 
     // ★ 사유 토글 — 시트 기록 모드(append/zone)에서만 노출
     document.getElementById('reasonToggle').style.display = (mode === 'lookup') ? 'none' : 'flex';
+
+    // ★ 수량 입력 토글 — append/zone 모드에서 노출 (조회 전용만 제외)
+    document.getElementById('qtyToggleBar').style.display = (mode === 'lookup') ? 'none' : 'block';
+    updateZoneQtyVisible();
 
     // 영역 토글
     document.getElementById('resultArea').style.display = (mode === 'zone') ? 'none' : '';
@@ -510,8 +690,10 @@ function setReason(reason) {
     var config = {
       fps: 10,
       qrbox: function(w, h) {
-        var minEdge = Math.min(w, h);
-        return { width: Math.floor(minEdge * 0.85), height: Math.floor(minEdge * 0.45) };
+        // 1D 바코드 위주 — 가로로 넓게 잡아 낮은 화면에서도 인식 영역 확보
+        var bw = Math.floor(w * 0.9);
+        var bh = Math.floor(Math.min(h * 0.7, 150));
+        return { width: bw, height: bh };
       },
       aspectRatio: 1.333,
       formatsToSupport: [
@@ -576,6 +758,8 @@ function setReason(reason) {
 
   function onScan(code) {
     if (!camRunning) return;
+    // 존 수량 모드: 보류 중인 같은 바코드는 무시 (수량 조정 시간 확보)
+    if (currentMode === 'zone' && qtyMode && zonePending && code === zonePending.scan) return;
     var now = Date.now();
     var cd = (currentMode === 'zone') ? ZONE_COOLDOWN_MS : COOLDOWN_MS;
     if (code === lastScan && (now - lastScanTime) < cd) return;
@@ -603,6 +787,10 @@ function setReason(reason) {
 
   
   function processScan(code) {
+    // 수량 입력 모드(append 전용) → 일단 조회만 하고 수량 패드를 띄움
+    var useQty = (qtyMode && currentMode === 'append');
+    var callMode = useQty ? 'lookup' : currentMode;
+
     document.getElementById('resultArea').innerHTML =
       '<div class="loading-card">' +
       '<div class="loading-spinner"></div>' +
@@ -613,8 +801,25 @@ function setReason(reason) {
       '</div>' +
       '</div>';
 
-    apiCall('processScan', { scanCode: code, mode: currentMode, reason: currentReason })
-      .then(function(res) { renderResult(code, res); })
+    apiCall('processScan', { scanCode: code, mode: callMode, reason: currentReason })
+      .then(function(res) {
+        if (res && res.error) {
+          document.getElementById('resultArea').innerHTML = '';
+          showToast(res.error, 'danger');
+          return;
+        }
+        if (useQty && res && res.found) {
+          // 매칭됨 → 수량 입력 단계
+          showQtyPad(code, res);
+        } else if (useQty && res && !res.found) {
+          // 데이터 없음 → 수량 의미 없음. "데이터 없음"으로 바로 기록
+          apiCall('processScan', { scanCode: code, mode: 'append', reason: currentReason })
+            .then(function() {}).catch(function() {});
+          renderResult(code, res);
+        } else {
+          renderResult(code, res);
+        }
+      })
       .catch(function(err) {
         document.getElementById('resultArea').innerHTML = '';
         showToast('서버 오류: ' + err.message, 'danger');
@@ -622,10 +827,178 @@ function setReason(reason) {
   }
 
 
+  // ========== 수량 입력 모드 ==========
+  function setQtyMode(on) {
+    qtyMode = !!on;
+    try { localStorage.setItem(QTY_MODE_KEY, qtyMode ? '1' : '0'); } catch (e) {}
+    var el = document.getElementById('qtyToggle');
+    if (el) el.checked = qtyMode;
+    if (!qtyMode && zonePending) commitZonePending();
+    updateZoneQtyVisible();
+    zoneQtyHintUpdate();
+    showToast(qtyMode ? '🔢 수량 입력 모드 ON' : '수량 입력 모드 OFF', '');
+  }
 
+  function showQtyPad(code, res) {
+    qtyValue = 1;
+    qtyScan = code;
+    qtyRes = res;
 
+    var imgHtml = res.img
+      ? '<img src="' + escapeAttr(res.img) + '" onerror="this.parentElement.innerHTML=\'<span class=no-img>🖼️</span>\'">'
+      : '<span class="no-img">🖼️</span>';
+    var locClass = res.isOutOfStock ? 'warn' : '';
+    var locIcon = res.isOutOfStock ? '⚠️' : '📍';
 
+    var html = '<div class="result-card ' + (res.isOutOfStock ? 'outofstock' : '') + '">' +
+      '<div class="result-top">' +
+        '<div class="result-img">' + imgHtml + '</div>' +
+        '<div class="result-info">' +
+          '<h3 class="result-name">' + escapeHtml(res.name) + '</h3>' +
+          '<div class="result-code">' + escapeHtml(res.code) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="result-loc ' + locClass + '">' + locIcon + ' ' +
+        escapeHtml(res.zone) + ' / ' + escapeHtml(res.loc) +
+        (res.isOutOfStock ? ' (재고 0)' : '') +
+      '</div>' +
+      '<div class="qty-pad">' +
+        '<div class="qty-pad-label">📦 ' + escapeHtml(currentReason) + ' 수량을 입력하세요</div>' +
+        '<div class="qty-stepper">' +
+          '<button class="qty-step-btn" type="button" onclick="adjustQty(-1)">−</button>' +
+          '<input type="number" class="qty-input" id="qty-input" value="1" min="1" ' +
+            'inputmode="numeric" pattern="[0-9]*" ' +
+            'oninput="onQtyInput(this.value)" ' +
+            'onkeypress="if(event.key===\'Enter\')confirmQty()">' +
+          '<button class="qty-step-btn" type="button" onclick="adjustQty(1)">+</button>' +
+        '</div>' +
+        '<div class="qty-quick">' +
+          '<button class="qty-quick-chip" type="button" onclick="quickSetQty(1)">1</button>' +
+          '<button class="qty-quick-chip" type="button" onclick="quickSetQty(2)">2</button>' +
+          '<button class="qty-quick-chip" type="button" onclick="quickSetQty(3)">3</button>' +
+          '<button class="qty-quick-chip" type="button" onclick="quickSetQty(5)">5</button>' +
+          '<button class="qty-quick-chip" type="button" onclick="quickSetQty(10)">10</button>' +
+        '</div>' +
+        '<div class="qty-actions">' +
+          '<button class="qty-cancel" type="button" onclick="cancelQty()">취소</button>' +
+          '<button class="qty-confirm" type="button" onclick="confirmQty()">✅ 확정 · 기록</button>' +
+        '</div>' +
+      '</div>' +
+      '</div>';
 
+    document.getElementById('resultArea').innerHTML = html;
+    showToast('🔢 수량 입력: ' + res.name, '');
+    scrollToResult();
+  }
+
+  function syncQtyInput() {
+    var inp = document.getElementById('qty-input');
+    if (inp) inp.value = qtyValue;
+  }
+  function markQuickChip(v) {
+    var chips = document.querySelectorAll('.qty-quick-chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].classList.toggle('active', chips[i].textContent === String(v));
+    }
+  }
+  function onQtyInput(v) {
+    var n = parseInt(v, 10);
+    qtyValue = (isNaN(n) || n < 1) ? 1 : n;
+    markQuickChip(qtyValue);
+  }
+  function adjustQty(delta) {
+    qtyValue = Math.max(1, (qtyValue || 1) + delta);
+    syncQtyInput();
+    markQuickChip(qtyValue);
+  }
+  function quickSetQty(v) {
+    qtyValue = v;
+    syncQtyInput();
+    markQuickChip(v);
+  }
+
+  function confirmQty() {
+    if (!qtyRes) return;
+    var inp = document.getElementById('qty-input');
+    if (inp) {
+      var n = parseInt(inp.value, 10);
+      qtyValue = (isNaN(n) || n < 1) ? 1 : n;
+    }
+    var q = qtyValue;
+    var scan = qtyScan;
+
+    document.getElementById('resultArea').innerHTML =
+      '<div class="loading-card">' +
+      '<div class="loading-spinner"></div>' +
+      '<div>' +
+      '<div style="font-weight:800;font-size:14px;">' + q + '개 기록 중...</div>' +
+      '<div style="font-family:monospace;font-size:12px;color:var(--text-muted);margin-top:4px;">' +
+      escapeHtml(scan) + '</div>' +
+      '</div>' +
+      '</div>';
+
+    apiCall('processScan', { scanCode: scan, mode: 'append', reason: currentReason, qty: q })
+      .then(function(res) {
+        if (res && res.error) {
+          document.getElementById('resultArea').innerHTML = '';
+          showToast(res.error, 'danger');
+          return;
+        }
+        renderQtyResult(res, q);
+        pushRecent(scan, res.found ? res.name : '데이터 없음', !!res.found);
+        showToast('✅ ' + q + '개 기록: ' + (res.found ? res.name : scan), 'success');
+        qtyRes = null;
+        qtyScan = '';
+      })
+      .catch(function(err) {
+        document.getElementById('resultArea').innerHTML = '';
+        showToast('서버 오류: ' + err.message, 'danger');
+      });
+  }
+
+  function renderQtyResult(res, qty) {
+    var html = '';
+    if (!res.found) {
+      html = '<div class="result-card notfound">' +
+        '<span class="badge-notfound">❌ 데이터 없음</span>' +
+        '<div class="result-name">' + escapeHtml(res.scan || qtyScan || '') + '</div>' +
+        '<div style="margin-top:8px;color:var(--text-muted);font-size:13px;">시트엔 "데이터 없음"으로 기록됨</div>' +
+        '</div>';
+    } else {
+      var imgHtml = res.img
+        ? '<img src="' + escapeAttr(res.img) + '" onerror="this.parentElement.innerHTML=\'<span class=no-img>🖼️</span>\'">'
+        : '<span class="no-img">🖼️</span>';
+      var locClass = res.isOutOfStock ? 'warn' : '';
+      var locIcon = res.isOutOfStock ? '⚠️' : '📍';
+      html = '<div class="result-card ' + (res.isOutOfStock ? 'outofstock' : '') + '">' +
+        '<span class="badge-saved qty">✅ ' + escapeHtml(currentReason) + ' · ' + qty + '개 기록됨</span>' +
+        '<div class="result-top">' +
+          '<div class="result-img">' + imgHtml + '</div>' +
+          '<div class="result-info">' +
+            '<h3 class="result-name">' + escapeHtml(res.name) + '</h3>' +
+            '<div class="result-code">' + escapeHtml(res.code) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="result-loc ' + locClass + '">' + locIcon + ' ' +
+          escapeHtml(res.zone) + ' / ' + escapeHtml(res.loc) +
+          (res.isOutOfStock ? ' (재고 0)' : '') +
+        '</div>' +
+        '<div class="result-meta">' +
+          (res.shortCode ? '<span>숏: ' + escapeHtml(res.shortCode) + '</span>' : '') +
+          (res.supplier ? '<span>공급: ' + escapeHtml(res.supplier) + '</span>' : '') +
+          (res.storeType ? '<span>' + escapeHtml(res.storeType) + '</span>' : '') +
+        '</div>' +
+        '</div>';
+    }
+    document.getElementById('resultArea').innerHTML = html;
+  }
+
+  function cancelQty() {
+    document.getElementById('resultArea').innerHTML = '';
+    qtyRes = null;
+    qtyScan = '';
+    showToast('취소됨 — 기록 안 함');
+  }
 
 
   
@@ -709,6 +1082,7 @@ function setReason(reason) {
       pushRecent(code, res.name, true);
     }
     document.getElementById('resultArea').innerHTML = html;
+    scrollToResult();
   }
 
 function loadZoneCache(silent) {
@@ -770,18 +1144,100 @@ function loadZoneCache(silent) {
     var displayZone = found ? zone : '데이터없음';
 
     renderZoneBig(code, displayZone, found);
+    beepZone(found ? (zone === '재고없음' ? 'warn' : 'ok') : 'ng');
 
-    var ts = nowTs();
-    zoneQueue.push({ scan: code, zone: displayZone, ts: ts, reason: currentReason });
+    if (qtyMode) {
+      // 수량 입력 모드: 이전 보류 건을 자동 확정하고 새 보류 시작
+      if (zonePending) commitZonePending();
+      zonePending = { scan: code, zone: displayZone, found: found, qty: 1, ts: nowTs() };
+      zoneQtyShowPending();
+    } else {
+      enqueueZone(code, displayZone, found, 1, nowTs());
+    }
+  }
+
+  // 큐 적재 (실제 시트 기록 대상)
+  function enqueueZone(scan, zone, found, qty, ts) {
+    zoneQueue.push({ scan: scan, zone: zone, ts: ts, reason: currentReason, qty: qty });
     try { localStorage.setItem(ZONE_QKEY, JSON.stringify(zoneQueue)); } catch (e) {}
-
     zoneCntScan++;
-    zoneStats[displayZone] = (zoneStats[displayZone] || 0) + 1;
+    zoneStats[zone] = (zoneStats[zone] || 0) + 1;
     renderZoneStats();
     updateZoneCounters();
     scheduleZoneFlush();
+  }
 
-    beepZone(found ? (zone === '재고없음' ? 'warn' : 'ok') : 'ng');
+  // 보류 건 확정 → 큐로
+  function commitZonePending() {
+    if (!zonePending) return;
+    enqueueZone(zonePending.scan, zonePending.zone, zonePending.found, zonePending.qty, zonePending.ts);
+    zonePending = null;
+  }
+
+  // ----- 존 수량 입력 UI -----
+  function updateZoneQtyVisible() {
+    var on = (qtyMode && currentMode === 'zone');
+    var el = document.getElementById('zoneQty');
+    if (!el) return;
+    el.style.display = on ? 'block' : 'none';
+    if (!on) el.classList.remove('active');
+  }
+  function zoneQtyShowPending() {
+    var el = document.getElementById('zoneQty');
+    if (el) el.classList.add('active');
+    var inp = document.getElementById('zoneQtyInput');
+    if (inp) inp.value = 1;
+    zoneQtyHintUpdate();
+  }
+  function zoneQtyShowIdle() {
+    var el = document.getElementById('zoneQty');
+    if (el) el.classList.remove('active');
+    var inp = document.getElementById('zoneQtyInput');
+    if (inp) inp.value = 1;
+    zoneQtyHintUpdate();
+  }
+  function zoneQtyHintUpdate() {
+    var hint = document.getElementById('zoneQtyHint');
+    if (!hint) return;
+    if (zonePending) {
+      hint.textContent = '📦 ' + zonePending.zone + ' · ' + zonePending.qty + '개 — 다음 스캔하면 자동 확정';
+    } else {
+      hint.textContent = '스캔하면 여기서 수량을 조정하세요';
+    }
+  }
+  function zoneQtySync() {
+    var inp = document.getElementById('zoneQtyInput');
+    if (inp) inp.value = zonePending ? zonePending.qty : 1;
+    zoneQtyHintUpdate();
+  }
+  function zoneQtyAdjust(d) {
+    if (!zonePending) return;
+    zonePending.qty = Math.max(1, (zonePending.qty || 1) + d);
+    zoneQtySync();
+  }
+  function zoneQtyQuick(v) {
+    if (!zonePending) return;
+    zonePending.qty = v;
+    zoneQtySync();
+  }
+  function zoneQtyOnInput(v) {
+    if (!zonePending) return;
+    var n = parseInt(v, 10);
+    zonePending.qty = (isNaN(n) || n < 1) ? 1 : n;
+    zoneQtyHintUpdate();
+  }
+  function zoneQtyCommit() {
+    if (!zonePending) { showToast('보류 중인 스캔 없음', ''); return; }
+    var inp = document.getElementById('zoneQtyInput');
+    if (inp) {
+      var n = parseInt(inp.value, 10);
+      zonePending.qty = (isNaN(n) || n < 1) ? 1 : n;
+    }
+    var q = zonePending.qty;
+    var nm = zonePending.zone;
+    commitZonePending();
+    zoneQtyShowIdle();
+    showToast('✓ ' + nm + ' ' + q + '개 기록 대기열 추가', 'success');
   }
 
 
@@ -1062,13 +1518,32 @@ function loadZoneCache(silent) {
     window._toastTimer = setTimeout(function() { t.className = 'toast'; }, 1800);
   }
 
+  // 결과 영역으로 스크롤 (시트 누적/조회 모드 — 스캔 후 카메라 멈춘 상태)
+  function scrollToResult() {
+    var el = document.getElementById('resultArea');
+    if (el && el.scrollIntoView) {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+      catch (e) { el.scrollIntoView(); }
+    }
+  }
+
   // 페이지 떠나기 전 — 존 모드 미전송 건 있으면 경고
   window.addEventListener('beforeunload', function(e) {
+    if (zonePending) commitZonePending();   // 보류 건 → 큐 (백업)
     if (zoneQueue.length > 0) {
       e.preventDefault();
       e.returnValue = '미전송 ' + zoneQueue.length + '건이 있습니다.';
     }
   });
+
+  // 수량 입력 모드 복원
+  try { qtyMode = (localStorage.getItem(QTY_MODE_KEY) === '1'); } catch (e) { qtyMode = false; }
+  var _qtyToggleEl = document.getElementById('qtyToggle');
+  if (_qtyToggleEl) _qtyToggleEl.checked = qtyMode;
+  // 초기 모드(zone)에 맞춰 토글/수량바 노출
+  document.getElementById('qtyToggleBar').style.display = (currentMode === 'lookup') ? 'none' : 'block';
+  updateZoneQtyVisible();
+  zoneQtyHintUpdate();
 
   updateWorkerLabel();
   // 기본 모드가 zone이므로 페이지 로드 시 캐시 즉시 로드
